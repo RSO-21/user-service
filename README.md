@@ -18,58 +18,30 @@ And communication with a **PostgreSQL** database (locally via Docker, in product
 
 ## 1. Prerequisites
 
-To run this project you need:
+To run this project you need Docker/Compose plus access to a PostgreSQL instance (Azure or local).
 
-* Docker Compose
+Create a `.env` file with the shared database credentials (same format used by the other services in the platform):
 
-You will also need a PostgreSQL instance:
-
-* **Local**: provided via Docker Compose
-* **Production**: Azure Database for PostgreSQL
+```env
+PGHOST=your_postgres_host
+PGUSER=your_postgres_user
+PGPASSWORD=your_postgres_password
+PGPORT=5432
+PGDATABASE=rso
+```
 
 ---
 
-## 2. Local development with Docker Compose
+## 2. Running with Docker
 
-### 2.1. Environment variables
-
-The service expects a `DATABASE_URL` environment variable.
-When using Docker Compose locally, this is already set in `docker-compose.yml` to point to the Postgres container.
-
-You do not need to set anything manually for local Docker use.
-
-### 2.2. Build and run
-
-From the project root (where `docker-compose.yml` is located), run:
+This service is usually launched via the shared `dev-stack/docker-compose.yml`, which mounts the `.env` file and connects to the shared Postgres instance. To run it on its own:
 
 ```bash
-docker-compose up --build
+docker build -t user-service .
+docker run --env-file .env -p 8004:8000 user-service
 ```
 
-This will:
-
-* Start a PostgreSQL container
-* Build and start the User service container
-* Create the database schema on startup (for development purposes)
-
-The API will then be available at:
-
-* `http://localhost:8000`
-* OpenAPI/Swagger UI: `http://localhost:8000/docs`
-
-### 2.3. Stopping the services
-
-To stop:
-
-```bash
-docker-compose down
-```
-
-To remove volumes (database data) as well:
-
-```bash
-docker-compose down -v
-```
+Swagger UI will be available at `http://localhost:8004/docs` in this standalone mode.
 
 ---
 
@@ -106,10 +78,10 @@ In production you will usually use **Azure Database for PostgreSQL** instead of 
 
 Steps:
 
-1. Set the `DATABASE_URL` environment variable for the container or deployment, using the Azure connection string format (including `sslmode=require` if needed).
+1. Set the PG variables (or inject `DATABASE_URL` constructed from them) for the container or deployment, including `sslmode=require` if needed.
 2. Deploy the User microservice container (e.g. Azure Container Apps, App Service, or AKS) and ensure:
 
    * The container can reach the Azure PostgreSQL instance
-   * `DATABASE_URL` is correctly configured in that environment
+  * The PG env vars resolve to your Azure credentials
 
-In this setup you do **not** run the `db` service from `docker-compose.yml` in production.
+In this setup you do **not** run a sidecar Postgres container; everything points to the managed Azure database.

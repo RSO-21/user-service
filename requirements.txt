@@ -4,4 +4,6 @@ sqlalchemy[asyncio]
 asyncpg
 pydantic
 pydantic[email]
+pydantic-settings
 httpx
+prometheus-fastapi-instrumentator

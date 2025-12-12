@@ -8,8 +8,11 @@ from datetime import datetime
 from database import get_db, engine
 from models import Base, User
 from schemas import UserCreate, UserUpdate, UserOut, UserOrderHistory, OrderItem
+from prometheus_fastapi_instrumentator import Instrumentator
 
 app = FastAPI(title="User Microservice")
+instrumentator = Instrumentator()
+instrumentator.instrument(app).expose(app)
 
 
 @app.on_event("startup")
