@@ -2,12 +2,12 @@ from fastapi import FastAPI, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from typing import List
-import httpx
-from datetime import datetime
+from datetime import timezone
+from app.grpc.orders_client import get_orders_by_user
 
-from database import get_db, engine
-from models import Base, User
-from schemas import UserCreate, UserUpdate, UserOut, UserOrderHistory, OrderItem
+from app.database import get_db, engine
+from app.models import Base, User
+from app.schemas import OrderItemOut, OrderOut, UserCreate, UserUpdate, UserOut, UserOrderHistory
 from prometheus_fastapi_instrumentator import Instrumentator
 
 app = FastAPI(title="User Microservice")
@@ -66,7 +66,7 @@ async def update_user(user_id: int, payload: UserUpdate, db: AsyncSession = Depe
     return user
 
 
-# 4) List users (optional)
+# 4) List users
 @app.get("/users", response_model=List[UserOut])
 async def list_users(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User))
@@ -74,7 +74,7 @@ async def list_users(db: AsyncSession = Depends(get_db)):
     return users
 
 
-# 5) Get user order history (FAKE for now)
+# 5) Get user order history
 @app.get("/users/{user_id}/orders", response_model=UserOrderHistory)
 async def get_user_orders(user_id: int, db: AsyncSession = Depends(get_db)):
     # ensure user exists
@@ -83,43 +83,41 @@ async def get_user_orders(user_id: int, db: AsyncSession = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # TODO: call Orders microservice via HTTP
-    # For now we return mock data:
-    fake_orders = [
-        OrderItem(
-            order_id=1,
-            created_at=datetime(2025, 1, 10, 12, 0),
-            total_price=49.99,
-            status="delivered",
-        ),
-        OrderItem(
-            order_id=2,
-            created_at=datetime(2025, 2, 5, 15, 30),
-            total_price=19.99,
-            status="shipped",
-        ),
-    ]
+    try:
+        resp = get_orders_by_user(user_id=user_id, timeout_s=2.0)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Order service unavailable: {e}")
 
-    return UserOrderHistory(user_id=user_id, orders=fake_orders)
+    orders_out = []
+    for o in resp.orders:
+        created_at = o.created_at.ToDatetime().replace(tzinfo=timezone.utc)
+        updated_at = o.updated_at.ToDatetime().replace(tzinfo=timezone.utc)
 
-"""
-ORDER_SERVICE_URL = "http://order-service:8001"  # e.g. Docker compose service name
+        partner_id = o.partner_id if o.HasField("partner_id") else None
+        payment_id = o.payment_id if o.HasField("payment_id") else None
 
-@app.get("/users/{user_id}/orders", response_model=UserOrderHistory)
-async def get_user_orders(user_id: int, db: AsyncSession = Depends(get_db)):
-    # check user exists
-    result = await db.execute(select(User).where(User.id == user_id))
-    user = result.scalar_one_or_none()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        items_out = [
+            OrderItemOut(
+                id=it.id,
+                order_id=it.order_id,
+                offer_id=it.offer_id,
+                quantity=it.quantity,
+            )
+            for it in o.items
+        ]
 
-    async with httpx.AsyncClient() as client:
-        resp = await client.get(f"{ORDER_SERVICE_URL}/orders", params={"user_id": user_id})
+        orders_out.append(
+            OrderOut(
+                id=o.id,
+                user_id=o.user_id,
+                partner_id=partner_id,
+                order_status=o.order_status,
+                payment_status=o.payment_status,
+                payment_id=payment_id,
+                created_at=created_at,
+                updated_at=updated_at,
+                items=items_out,
+            )
+        )
 
-    if resp.status_code != 200:
-        raise HTTPException(status_code=502, detail="Order service unavailable")
-
-    data = resp.json()
-    # adapt JSON to UserOrderHistory if needed
-    return UserOrderHistory(user_id=user_id, orders=data["orders"])
-"""
+    return UserOrderHistory(user_id=user_id, orders=orders_out)

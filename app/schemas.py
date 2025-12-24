@@ -1,6 +1,6 @@
 from pydantic import BaseModel, EmailStr
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
 class UserCreate(BaseModel):
     email: EmailStr
@@ -20,13 +20,23 @@ class UserOut(BaseModel):
     class Config:
         from_attributes = True  # for SQLAlchemy integration
 
-# Models for order history (when Order service is made):
-class OrderItem(BaseModel):
+class OrderItemOut(BaseModel):
+    id: int
     order_id: int
+    offer_id: int
+    quantity: int
+
+class OrderOut(BaseModel):
+    id: int
+    user_id: int
+    partner_id: Optional[int] = None
+    order_status: str
+    payment_status: str
+    payment_id: Optional[int] = None
     created_at: datetime
-    total_price: float
-    status: str
+    updated_at: datetime
+    items: List[OrderItemOut]
 
 class UserOrderHistory(BaseModel):
     user_id: int
-    orders: List[OrderItem]
+    orders: List[OrderOut]

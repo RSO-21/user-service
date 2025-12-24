@@ -31,7 +31,7 @@ services:
       - "8000:8000"
     # Useful in dev: auto-reload requires extra setup, so for now we just mount code if you want
     volumes:
-      - ./app:/app
+      - ./:/workspace
 
 volumes:
   db_data:
