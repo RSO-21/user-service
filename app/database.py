@@ -1,21 +1,22 @@
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
-
+# app/database.py
+from sqlalchemy import create_engine, text
+from sqlalchemy.orm import sessionmaker, DeclarativeBase
 from app.config import settings
 
-DATABASE_URL = (
-    "postgresql+asyncpg://"
-    f"{settings.pg_user}:{settings.pg_password}"
-    f"@{settings.pg_host}:{settings.pg_port}/{settings.pg_database}"
-)
 
-engine = create_async_engine(DATABASE_URL, echo=False)
+DATABASE_URL = f"postgresql://{settings.pg_user}:{settings.pg_password}@{settings.pg_host}:{settings.pg_port}/{settings.pg_database}"
 
-AsyncSessionLocal = async_sessionmaker(
-    bind=engine,
-    expire_on_commit=False,
-    class_=AsyncSession,
-)
+engine = create_engine(DATABASE_URL)
 
-async def get_db():
-    async with AsyncSessionLocal() as session:
-        yield session
+SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+
+class Base(DeclarativeBase):
+    pass
+
+# Dependency for FastAPI routes
+def get_db_session(schema: str = None):
+    session = SessionLocal()
+    if schema:
+        # Set search_path for this session
+        session.execute(text(f"SET search_path TO {schema}"))
+    return session

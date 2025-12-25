@@ -1,58 +1,65 @@
 from fastapi import FastAPI, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 from sqlalchemy import select
 from typing import List
 from datetime import timezone
-from app.grpc.orders_client import get_orders_by_user
 
-from app.database import get_db, engine
+from app.grpc.orders_client import get_orders_by_user
+from app.database import get_db_session as get_db, engine
 from app.models import Base, User
-from app.schemas import OrderItemOut, OrderOut, UserCreate, UserUpdate, UserOut, UserOrderHistory
+from app.schemas import (
+    OrderItemOut,
+    OrderOut,
+    UserUpdate,
+    UserOut,
+    UserOrderHistory,
+)
+
 from prometheus_fastapi_instrumentator import Instrumentator
 
 app = FastAPI(title="User Microservice")
+
 instrumentator = Instrumentator()
 instrumentator.instrument(app).expose(app)
 
 
+# --------------------
+# Startup
+# --------------------
 @app.on_event("startup")
-async def on_startup():
+def on_startup():
     # Dev only (in production use Alembic)
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    Base.metadata.create_all(bind=engine)
 
 
-# 1) Create new user
-@app.post("/users", response_model=UserOut, status_code=status.HTTP_201_CREATED)
-async def create_user(payload: UserCreate, db: AsyncSession = Depends(get_db)):
-    # check if email already exists
-    result = await db.execute(select(User).where(User.email == payload.email))
-    existing = result.scalar_one_or_none()
-    if existing:
-        raise HTTPException(status_code=400, detail="Email already registered")
-
-    user = User(email=payload.email, name=payload.name)
-    db.add(user)
-    await db.commit()
-    await db.refresh(user)
-    return user
-
-
-# 2) Get user by id
+# --------------------
+# Get user by id
+# --------------------
 @app.get("/users/{user_id}", response_model=UserOut)
-async def get_user(user_id: int, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(User).where(User.id == user_id))
-    user = result.scalar_one_or_none()
+def get_user(user_id: int, db: Session = Depends(get_db)):
+    user = db.execute(
+        select(User).where(User.id == user_id)
+    ).scalar_one_or_none()
+
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+
     return user
 
 
-# 3) Update user
+# --------------------
+# Update user
+# --------------------
 @app.patch("/users/{user_id}", response_model=UserOut)
-async def update_user(user_id: int, payload: UserUpdate, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(User).where(User.id == user_id))
-    user = result.scalar_one_or_none()
+def update_user(
+    user_id: int,
+    payload: UserUpdate,
+    db: Session = Depends(get_db),
+):
+    user = db.execute(
+        select(User).where(User.id == user_id)
+    ).scalar_one_or_none()
+
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -61,32 +68,41 @@ async def update_user(user_id: int, payload: UserUpdate, db: AsyncSession = Depe
     if payload.name is not None:
         user.name = payload.name
 
-    await db.commit()
-    await db.refresh(user)
+    db.commit()
+    db.refresh(user)
+
     return user
 
 
-# 4) List users
+# --------------------
+# List users
+# --------------------
 @app.get("/users", response_model=List[UserOut])
-async def list_users(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(User))
-    users = result.scalars().all()
+def list_users(db: Session = Depends(get_db)):
+    users = db.execute(select(User)).scalars().all()
     return users
 
 
-# 5) Get user order history
+# --------------------
+# Get user order history
+# --------------------
 @app.get("/users/{user_id}/orders", response_model=UserOrderHistory)
-async def get_user_orders(user_id: int, db: AsyncSession = Depends(get_db)):
+def get_user_orders(user_id: int, db: Session = Depends(get_db)):
     # ensure user exists
-    result = await db.execute(select(User).where(User.id == user_id))
-    user = result.scalar_one_or_none()
+    user = db.execute(
+        select(User).where(User.id == user_id)
+    ).scalar_one_or_none()
+
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
     try:
         resp = get_orders_by_user(user_id=user_id, timeout_s=2.0)
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Order service unavailable: {e}")
+        raise HTTPException(
+            status_code=502,
+            detail=f"Order service unavailable: {e}",
+        )
 
     orders_out = []
     for o in resp.orders:
