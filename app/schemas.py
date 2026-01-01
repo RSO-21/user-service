@@ -1,7 +1,6 @@
 from pydantic import BaseModel, EmailStr
 from datetime import datetime
 from typing import List, Optional
-from uuid import UUID
 
 class UserCreate(BaseModel):
     email: EmailStr
@@ -12,7 +11,7 @@ class UserUpdate(BaseModel):
     name: str | None = None
 
 class UserOut(BaseModel):
-    id: UUID
+    id: str
     email: EmailStr
     name: Optional[str] = None
     created_at: datetime
@@ -22,14 +21,14 @@ class UserOut(BaseModel):
         from_attributes = True  # for SQLAlchemy integration
 
 class OrderItemOut(BaseModel):
-    id: UUID               
-    order_id: UUID         
-    offer_id: UUID          
+    id: str               
+    order_id: str         
+    offer_id: str          
     quantity: int
 
 class OrderOut(BaseModel):
-    id: UUID
-    user_id: UUID
+    id: str
+    user_id: str
     partner_id: Optional[int] = None
     order_status: str
     payment_status: str
@@ -39,5 +38,5 @@ class OrderOut(BaseModel):
     items: List[OrderItemOut]
 
 class UserOrderHistory(BaseModel):
-    user_id: UUID
+    user_id: str
     orders: List[OrderOut]

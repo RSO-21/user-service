@@ -1,4 +1,3 @@
-from uuid import UUID
 from fastapi import FastAPI, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import select
@@ -37,7 +36,7 @@ def on_startup():
 # Get user by id
 # --------------------
 @app.get("/users/{user_id}", response_model=UserOut)
-def get_user(user_id: UUID, db: Session = Depends(get_db)):
+def get_user(user_id: str, db: Session = Depends(get_db)):
     user = db.execute(
         select(User).where(User.id == user_id)
     ).scalar_one_or_none()
@@ -53,7 +52,7 @@ def get_user(user_id: UUID, db: Session = Depends(get_db)):
 # --------------------
 @app.patch("/users/{user_id}", response_model=UserOut)
 def update_user(
-    user_id: UUID,
+    user_id: str,
     payload: UserUpdate,
     db: Session = Depends(get_db),
 ):
@@ -88,7 +87,7 @@ def list_users(db: Session = Depends(get_db)):
 # Get user order history
 # --------------------
 @app.get("/users/{user_id}/orders", response_model=UserOrderHistory)
-def get_user_orders(user_id: UUID, db: Session = Depends(get_db)):
+def get_user_orders(user_id: str, db: Session = Depends(get_db)):
     # ensure user exists
     user = db.execute(
         select(User).where(User.id == user_id)
