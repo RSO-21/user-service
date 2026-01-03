@@ -21,13 +21,13 @@ class UserOut(BaseModel):
         from_attributes = True  # for SQLAlchemy integration
 
 class OrderItemOut(BaseModel):
-    id: str               
-    order_id: str         
-    offer_id: str          
+    id: int               
+    order_id: int         
+    offer_id: int          
     quantity: int
 
 class OrderOut(BaseModel):
-    id: str
+    id: int
     user_id: str
     partner_id: Optional[int] = None
     order_status: str

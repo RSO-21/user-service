@@ -12,6 +12,15 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+RUN mkdir -p /workspace/app/grpc && \
+    test -f /workspace/app/grpc/__init__.py || touch /workspace/app/grpc/__init__.py
+RUN python -m grpc_tools.protoc \
+  -I/workspace/protos \
+  --python_out=/workspace/app/grpc \
+  --grpc_python_out=/workspace/app/grpc \
+  /workspace/protos/orders.proto
+RUN find /workspace/app/grpc -name '*_pb2_grpc.py' -exec sed -i 's/^import \(.*_pb2\) as \(.*\)$/from . import \1 as \2/' {} \;
+
 EXPOSE 8000
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--app-dir", "/workspace"]
 
