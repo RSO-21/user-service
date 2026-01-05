@@ -137,3 +137,18 @@ def get_user_orders(user_id: str, db: Session = Depends(get_db)):
         )
 
     return UserOrderHistory(user_id=user_id, orders=orders_out)
+
+
+# --------------------
+# Health
+# --------------------
+@app.get("/health", tags=["health"])
+def health(db: Session = Depends(get_db)):
+    try:
+        db.execute(select(1))
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Database unavailable: {e}",
+        )
+    return {"status": "ok", "db": "ok"}
