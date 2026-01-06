@@ -1,4 +1,4 @@
-name: Build and Push to ACR (user-service)
+name: Build and Push to ACR ( user-service )
 
 on:
   push:
