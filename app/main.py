@@ -14,10 +14,20 @@ from app.schemas import (
     UserOut,
     UserOrderHistory,
 )
+from fastapi.middleware.cors import CORSMiddleware
 
 from prometheus_fastapi_instrumentator import Instrumentator
 
 app = FastAPI(title="User Microservice")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:4200",  # Angular dev
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 instrumentator = Instrumentator()
 instrumentator.instrument(app).expose(app)
@@ -63,10 +73,11 @@ def update_user(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    if payload.email is not None:
-        user.email = payload.email
-    if payload.name is not None:
-        user.name = payload.name
+    # 🔑 apply only provided fields
+    update_data = payload.model_dump(exclude_unset=True)
+
+    for field, value in update_data.items():
+        setattr(user, field, value)
 
     db.commit()
     db.refresh(user)

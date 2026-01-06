@@ -6,7 +6,7 @@ from . import orders_pb2, orders_pb2_grpc
 ORDERS_GRPC_HOST = os.getenv("ORDERS_GRPC_HOST", "orders-ms")
 ORDERS_GRPC_PORT = int(os.getenv("ORDERS_GRPC_PORT", "50051"))
 
-def get_orders_by_user(user_id: int, tenant_id: str | None = None, timeout_s: float = 2.0):
+def get_orders_by_user(user_id: str, tenant_id: str | None = None, timeout_s: float = 2.0):
     target = f"{ORDERS_GRPC_HOST}:{ORDERS_GRPC_PORT}"
 
     # insecure for in-cluster demo; in production use mTLS/mesh

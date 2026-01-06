@@ -23,3 +23,4 @@ class User(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )
+    partner_id: Mapped[str] = mapped_column(String(36), nullable=True)  # FK to Partner, OWNER of said partner
