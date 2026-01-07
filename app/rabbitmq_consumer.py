@@ -19,41 +19,42 @@ def get_connection():
 
 def callback(ch, method, properties, body):
     event = json.loads(body.decode("utf-8"))
-
-    db = get_db()
+    tenant_id = event.get("tenant_id", "public")
     
-    logger.info(
-        "[EVENT:RECEIVED] user_created | user_id=%s username=%s",
-        event["user_id"], event["username"]
-    )
-    try:
-        # Idempotency: do not insert twice
-        existing = db.query(User).filter(User.id == event["user_id"]).first()
-        if existing:
-            print(f"User {event['user_id']} already exists")
-            ch.basic_ack(delivery_tag=method.delivery_tag)
-            return
-
-        user = User(
-            id=event["user_id"],          # Keycloak ID
-            username=event["username"],
-            email=event["email"]
-        )
-
-        db.add(user)
-        db.commit()
-
+    with get_db(schema=tenant_id) as db:
+    
         logger.info(
-            "[EVENT:SUCCESS] user created | user_id=%s",
-            event["user_id"]
+            "[EVENT:RECEIVED] user_created | user_id=%s username=%s",
+            event["user_id"], event["username"]
         )
+        try:
+            # Idempotency: do not insert twice
+            existing = db.query(User).filter(User.id == event["user_id"]).first()
+            if existing:
+                print(f"User {event['user_id']} already exists")
+                ch.basic_ack(delivery_tag=method.delivery_tag)
+                return
 
-        ch.basic_ack(delivery_tag=method.delivery_tag)
+            user = User(
+                id=event["user_id"],          # Keycloak ID
+                username=event["username"],
+                email=event["email"]
+            )
 
-    except Exception as e:
-        print(f"Error processing user_created event: {e}")
-        db.rollback()
-        # message not acked → will be retried
+            db.add(user)
+            db.commit()
+
+            logger.info(
+                "[EVENT:SUCCESS] user created | user_id=%s",
+                event["user_id"]
+            )
+
+            ch.basic_ack(delivery_tag=method.delivery_tag)
+
+        except Exception as e:
+            print(f"Error processing user_created event: {e}")
+            db.rollback()
+            # message not acked → will be retried
 
 def start_consumer():
     connection = get_connection()
