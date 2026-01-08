@@ -1,11 +1,11 @@
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, Header, status
 from sqlalchemy.orm import Session
 from sqlalchemy import select
-from typing import List
+from typing import List, Optional
 from datetime import timezone
 
 from app.grpc.orders_client import get_orders_by_user
-from app.database import get_db_session as get_db, engine
+from app.database import get_db_session, engine
 from app.models import Base, User
 from app.schemas import (
     OrderItemOut,
@@ -17,6 +17,7 @@ from app.schemas import (
 from fastapi.middleware.cors import CORSMiddleware
 
 from prometheus_fastapi_instrumentator import Instrumentator
+
 
 app = FastAPI(title="User Microservice")
 app.add_middleware(
@@ -32,6 +33,13 @@ app.add_middleware(
 instrumentator = Instrumentator()
 instrumentator.instrument(app).expose(app)
 
+def get_tenant_id(x_tenant_id: Optional[str] = Header(None)) -> str:
+    """Extract tenant ID from header, default to public"""
+    return x_tenant_id or "public"
+
+def get_db_with_schema(tenant_id: str = Depends(get_tenant_id)):
+    with get_db_session(schema=tenant_id) as db:
+        yield db
 
 # --------------------
 # Startup
@@ -46,7 +54,7 @@ def on_startup():
 # Get user by id
 # --------------------
 @app.get("/users/{user_id}", response_model=UserOut)
-def get_user(user_id: str, db: Session = Depends(get_db)):
+def get_user(user_id: str, db: Session = Depends(get_db_with_schema)):
     user = db.execute(
         select(User).where(User.id == user_id)
     ).scalar_one_or_none()
@@ -64,7 +72,7 @@ def get_user(user_id: str, db: Session = Depends(get_db)):
 def update_user(
     user_id: str,
     payload: UserUpdate,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db_with_schema),
 ):
     user = db.execute(
         select(User).where(User.id == user_id)
@@ -89,7 +97,7 @@ def update_user(
 # List users
 # --------------------
 @app.get("/users", response_model=List[UserOut])
-def list_users(db: Session = Depends(get_db)):
+def list_users(db: Session = Depends(get_db_with_schema)):
     users = db.execute(select(User)).scalars().all()
     return users
 
@@ -98,7 +106,7 @@ def list_users(db: Session = Depends(get_db)):
 # Get user order history
 # --------------------
 @app.get("/users/{user_id}/orders", response_model=UserOrderHistory)
-def get_user_orders(user_id: str, db: Session = Depends(get_db)):
+def get_user_orders(user_id: str, db: Session = Depends(get_db_with_schema)):
     # ensure user exists
     user = db.execute(
         select(User).where(User.id == user_id)
@@ -154,7 +162,7 @@ def get_user_orders(user_id: str, db: Session = Depends(get_db)):
 # Health
 # --------------------
 @app.get("/health", tags=["health"])
-def health(db: Session = Depends(get_db)):
+def health(db: Session = Depends(get_db_with_schema)):
     try:
         db.execute(select(1))
     except Exception as e:
