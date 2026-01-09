@@ -43,7 +43,7 @@ class OrderItemOut(BaseModel):
 class OrderOut(BaseModel):
     id: int
     user_id: str
-    partner_id: Optional[int] = None
+    partner_id: Optional[str] = None
     order_status: str
     payment_status: str
     payment_id: Optional[int] = None
