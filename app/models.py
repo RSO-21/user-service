@@ -1,6 +1,7 @@
 from datetime import datetime
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from sqlalchemy import String, DateTime, Integer
+from sqlalchemy import ARRAY, String, DateTime, Integer
+from sqlalchemy.ext.mutable import MutableList
 
 class Base(DeclarativeBase):
     pass
@@ -24,3 +25,8 @@ class User(Base):
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )
     partner_id: Mapped[str] = mapped_column(String(36), nullable=True)  # FK to Partner, OWNER of said partner
+    cart: Mapped[list[int]] = mapped_column(
+    MutableList.as_mutable(ARRAY(Integer)),
+    default=list,
+    nullable=False)
+    
