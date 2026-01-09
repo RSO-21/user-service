@@ -159,6 +159,58 @@ def get_user_orders(user_id: str, db: Session = Depends(get_db_with_schema)):
 
 
 # --------------------
+# Add order to cart (duplicates allowed)
+# --------------------
+@app.post("/users/{user_id}/cart/{order_id}", response_model=UserOut)
+def add_to_cart(
+    user_id: str,
+    order_id: int,
+    db: Session = Depends(get_db_with_schema),
+):
+    user = db.execute(
+        select(User).where(User.id == user_id)
+    ).scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if user.cart is None:
+        user.cart = []
+
+    user.cart.append(order_id)
+
+    db.commit()
+    db.refresh(user)
+
+    return user
+
+
+# --------------------
+# Remove ONE order occurrence from cart
+# --------------------
+@app.delete("/users/{user_id}/cart/{order_id}", response_model=UserOut)
+def remove_from_cart(
+    user_id: str,
+    order_id: int,
+    db: Session = Depends(get_db_with_schema),
+):
+    user = db.execute(
+        select(User).where(User.id == user_id)
+    ).scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if user.cart and order_id in user.cart:
+        user.cart.remove(order_id)  # removes first occurrence only
+
+    db.commit()
+    db.refresh(user)
+
+    return user
+
+
+# --------------------
 # Health
 # --------------------
 @app.get("/health", tags=["health"])
