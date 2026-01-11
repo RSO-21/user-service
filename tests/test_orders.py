@@ -25,35 +25,37 @@ class _FakeResp:
         self.orders = orders
 
 
+def _insert_user(engine, schema: str, user_id: str, username: str, email: str, cart=None):
+    if cart is None:
+        cart = []
+    with engine.begin() as conn:
+        conn.exec_driver_sql(f"SET search_path TO {schema}")
+        conn.exec_driver_sql(
+            "INSERT INTO users (id, username, email, cart, created_at, updated_at) VALUES (%s,%s,%s,%s, now(), now())",
+            (user_id, username, email, cart),
+        )
+
+
 def test_get_user_orders_success(client, app_and_engine, monkeypatch):
     _, engine = app_and_engine
     user_id = "00000000-0000-0000-0000-000000000004"
-
-    with engine.begin() as conn:
-        conn.exec_driver_sql("SET search_path TO public")
-        conn.exec_driver_sql(
-            "INSERT INTO users (id, username, email, cart, created_at, updated_at) VALUES (%s,%s,%s,%s, now(), now())",
-            (user_id, "o", "o@example.com", []),
-        )
+    _insert_user(engine, "public", user_id, "o", "o@example.com", [])
 
     import app.main as main_mod
 
     dt = datetime.datetime(2025, 1, 1, 12, 0, 0)
-
-    fake_resp = _FakeResp(
-        [
-            _FakeOrder(
-                external_id="ext-1",
-                order_id=123,
-                user_id=user_id,
-                order_status="CREATED",
-                total_amount=9.99,
-                created_at=_FakeTimestamp(dt),
-                tenant_id="public",
-                partner_id="partner-x",
-            )
-        ]
-    )
+    fake_resp = _FakeResp([
+        _FakeOrder(
+            external_id="ext-1",
+            order_id=123,
+            user_id=user_id,
+            order_status="CREATED",
+            total_amount=9.99,
+            created_at=_FakeTimestamp(dt),
+            tenant_id="public",
+            partner_id="partner-x",
+        )
+    ])
 
     def _fake_get_orders_by_user(user_id: str, timeout_s: float = 2.0, tenant_id=None):
         return fake_resp
@@ -73,13 +75,7 @@ def test_get_user_orders_success(client, app_and_engine, monkeypatch):
 def test_get_user_orders_grpc_failure_returns_502(client, app_and_engine, monkeypatch):
     _, engine = app_and_engine
     user_id = "00000000-0000-0000-0000-000000000005"
-
-    with engine.begin() as conn:
-        conn.exec_driver_sql("SET search_path TO public")
-        conn.exec_driver_sql(
-            "INSERT INTO users (id, username, email, cart, created_at, updated_at) VALUES (%s,%s,%s,%s, now(), now())",
-            (user_id, "f", "f@example.com", []),
-        )
+    _insert_user(engine, "public", user_id, "f", "f@example.com", [])
 
     import app.main as main_mod
 

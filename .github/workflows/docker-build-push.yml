@@ -33,6 +33,7 @@ jobs:
       PGUSER: testuser
       PGPASSWORD: testpass
       PGDATABASE: testdb
+      GOOGLE_API_KEY: dummy
       PYTHONDONTWRITEBYTECODE: "1"
       PYTHONUNBUFFERED: "1"
 

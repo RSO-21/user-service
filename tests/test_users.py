@@ -1,4 +1,15 @@
-from app.models import User
+def _insert_user(engine, schema: str, user_id: str, username: str, email: str, cart=None):
+    if cart is None:
+        cart = []
+    with engine.begin() as conn:
+        conn.exec_driver_sql(f"SET search_path TO {schema}")
+        conn.exec_driver_sql(
+            """
+            INSERT INTO users (id, username, email, cart, created_at, updated_at)
+            VALUES (%s,%s,%s,%s, now(), now())
+            """,
+            (user_id, username, email, cart),
+        )
 
 
 def test_get_user_404(client):
@@ -9,35 +20,15 @@ def test_get_user_404(client):
 
 def test_get_user_ok_in_public(client, app_and_engine):
     _, engine = app_and_engine
+    user_id = "00000000-0000-0000-0000-000000000001"
+    _insert_user(engine, "public", user_id, "luka", "luka@example.com", [])
 
-    # Insert into public schema
-    with engine.begin() as conn:
-        conn.exec_driver_sql("SET search_path TO public")
-        conn.exec_driver_sql(
-            """
-            INSERT INTO users (id, username, email, name, surname, address, longitude, latitude, partner_id, cart, created_at, updated_at)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s, now(), now())
-            """,
-            (
-                "00000000-0000-0000-0000-000000000001",
-                "tina",
-                "tina@example.com",
-                "Tina",
-                "Test",
-                "Street 1",
-                14.5,
-                46.0,
-                None,
-                [],
-            ),
-        )
-
-    r = client.get("/users/00000000-0000-0000-0000-000000000001")
+    r = client.get(f"/users/{user_id}")
     assert r.status_code == 200
     body = r.json()
-    assert body["id"] == "00000000-0000-0000-0000-000000000001"
-    assert body["username"] == "tina"
-    assert body["email"] == "tina@example.com"
+    assert body["id"] == user_id
+    assert body["username"] == "luka"
+    assert body["email"] == "luka@example.com"
     assert body["cart"] == []
 
 
@@ -45,18 +36,8 @@ def test_tenant_isolation(client, app_and_engine):
     _, engine = app_and_engine
     user_id = "00000000-0000-0000-0000-000000000010"
 
-    with engine.begin() as conn:
-        conn.exec_driver_sql("SET search_path TO tenant_a")
-        conn.exec_driver_sql(
-            "INSERT INTO users (id, username, email, cart, created_at, updated_at) VALUES (%s,%s,%s,%s, now(), now())",
-            (user_id, "a", "a@example.com", []),
-        )
-
-        conn.exec_driver_sql("SET search_path TO tenant_b")
-        conn.exec_driver_sql(
-            "INSERT INTO users (id, username, email, cart, created_at, updated_at) VALUES (%s,%s,%s,%s, now(), now())",
-            (user_id, "b", "b@example.com", []),
-        )
+    _insert_user(engine, "tenant_a", user_id, "a", "a@example.com", [])
+    _insert_user(engine, "tenant_b", user_id, "b", "b@example.com", [])
 
     r_a = client.get(f"/users/{user_id}", headers={"X-Tenant-Id": "tenant_a"})
     r_b = client.get(f"/users/{user_id}", headers={"X-Tenant-Id": "tenant_b"})
@@ -71,31 +52,19 @@ def test_tenant_isolation(client, app_and_engine):
 def test_patch_updates_only_sent_fields(client, app_and_engine):
     _, engine = app_and_engine
     user_id = "00000000-0000-0000-0000-000000000002"
-
-    with engine.begin() as conn:
-        conn.exec_driver_sql("SET search_path TO public")
-        conn.exec_driver_sql(
-            "INSERT INTO users (id, username, email, name, cart, created_at, updated_at) VALUES (%s,%s,%s,%s,%s, now(), now())",
-            (user_id, "x", "x@example.com", "Old", []),
-        )
+    _insert_user(engine, "public", user_id, "x", "x@example.com", [])
 
     r = client.patch(f"/users/{user_id}", json={"name": "New"})
     assert r.status_code == 200
     body = r.json()
     assert body["name"] == "New"
-    assert body["email"] == "x@example.com"
+    assert body["email"] == "x@example.com"  # unchanged
 
 
 def test_cart_duplicates_and_delete_removes_one(client, app_and_engine):
     _, engine = app_and_engine
     user_id = "00000000-0000-0000-0000-000000000003"
-
-    with engine.begin() as conn:
-        conn.exec_driver_sql("SET search_path TO public")
-        conn.exec_driver_sql(
-            "INSERT INTO users (id, username, email, cart, created_at, updated_at) VALUES (%s,%s,%s,%s, now(), now())",
-            (user_id, "c", "c@example.com", []),
-        )
+    _insert_user(engine, "public", user_id, "c", "c@example.com", [])
 
     r1 = client.post(f"/users/{user_id}/cart/7")
     assert r1.status_code == 200
@@ -108,3 +77,13 @@ def test_cart_duplicates_and_delete_removes_one(client, app_and_engine):
     r3 = client.delete(f"/users/{user_id}/cart/7")
     assert r3.status_code == 200
     assert r3.json()["cart"] == [7]
+
+
+def test_clear_cart_endpoint(client, app_and_engine):
+    _, engine = app_and_engine
+    user_id = "00000000-0000-0000-0000-000000000006"
+    _insert_user(engine, "public", user_id, "cc", "cc@example.com", [1, 2, 2])
+
+    r = client.delete(f"/users/{user_id}/cart")
+    assert r.status_code == 200
+    assert r.json()["cart"] == []

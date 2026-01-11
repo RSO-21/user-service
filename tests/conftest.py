@@ -14,12 +14,12 @@ def _clean_db(app_and_engine):
             conn.execute(text("TRUNCATE TABLE users RESTART IDENTITY CASCADE"))
 
 def _ensure_env():
-    required = ["PGHOST", "PGUSER", "PGPASSWORD", "PGDATABASE"]
+    required = ["PGHOST", "PGUSER", "PGPASSWORD", "PGDATABASE", "GOOGLE_API_KEY"]
     missing = [k for k in required if not os.getenv(k)]
     if missing:
         raise RuntimeError(
             f"Missing env vars for tests: {missing}. "
-            "In CI, set them via workflow env. Locally, export them or use a .env."
+            "Set them locally or in GitHub Actions env."
         )
     os.environ.setdefault("PGPORT", "5432")
 
