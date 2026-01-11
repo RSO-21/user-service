@@ -60,6 +60,10 @@ Removes **one occurrence** of `order_id` from the user’s cart.
 If `order_id` is not present, cart is unchanged.
 In case that user does not exist, it returns **404**.
 
+* `DELETE /users/{user_id}/cart` 
+
+Clears the entire user cart by removing all items at once.
+
 ### Orders
 
 * `GET /users/{user_id}/orders`
