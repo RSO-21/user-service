@@ -51,6 +51,16 @@ class OrderOut(BaseModel):
     updated_at: datetime
     items: List[OrderItemOut]
 
+class OrderSummaryOut(BaseModel):
+    external_id: str
+    order_id: int
+    tenant_id: str
+    partner_id: str
+    user_id: str
+    order_status: str
+    total_amount: float
+    created_at: datetime
+
 class UserOrderHistory(BaseModel):
     user_id: str
-    orders: List[OrderOut]
+    orders: List[OrderSummaryOut]

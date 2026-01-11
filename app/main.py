@@ -13,6 +13,7 @@ from app.schemas import (
     UserUpdate,
     UserOut,
     UserOrderHistory,
+    OrderSummaryOut
 )
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -125,33 +126,18 @@ def get_user_orders(user_id: str, db: Session = Depends(get_db_with_schema)):
 
     orders_out = []
     for o in resp.orders:
-        created_at = o.created_at.ToDatetime().replace(tzinfo=timezone.utc)
-        updated_at = o.updated_at.ToDatetime().replace(tzinfo=timezone.utc)
-
-        partner_id = o.partner_id if o.HasField("partner_id") else None
-        payment_id = o.payment_id if o.HasField("payment_id") else None
-
-        items_out = [
-            OrderItemOut(
-                id=it.id,
-                order_id=it.order_id,
-                offer_id=it.offer_id,
-                quantity=it.quantity,
-            )
-            for it in o.items
-        ]
+        dt = o.created_at.ToDatetime().replace(tzinfo=timezone.utc)
 
         orders_out.append(
-            OrderOut(
-                id=o.id,
+            OrderSummaryOut(
+                external_id=o.external_id,
+                order_id=o.order_id,
                 user_id=o.user_id,
-                partner_id=partner_id,
                 order_status=o.order_status,
-                payment_status=o.payment_status,
-                payment_id=payment_id,
-                created_at=created_at,
-                updated_at=updated_at,
-                items=items_out,
+                total_amount=o.total_amount,
+                created_at=dt,
+                tenant_id=o.tenant_id,
+                partner_id=o.partner_id
             )
         )
 
