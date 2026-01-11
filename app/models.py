@@ -9,7 +9,6 @@ class Base(DeclarativeBase):
 class User(Base):
     __tablename__ = "users"
 
-       # Keycloak user ID (UUID string)
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True, index=True, unique=True
     )
@@ -24,7 +23,7 @@ class User(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )
-    partner_id: Mapped[str] = mapped_column(String(36), nullable=True)  # FK to Partner, OWNER of said partner
+    partner_id: Mapped[str] = mapped_column(String(36), nullable=True)
     cart: Mapped[list[int]] = mapped_column(
     MutableList.as_mutable(ARRAY(Integer)),
     default=list,

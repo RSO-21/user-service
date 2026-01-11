@@ -8,8 +8,6 @@ from app.grpc.orders_client import get_orders_by_user
 from app.database import get_db_session, engine
 from app.models import Base, User
 from app.schemas import (
-    OrderItemOut,
-    OrderOut,
     UserUpdate,
     UserOut,
     UserOrderHistory,
@@ -24,7 +22,7 @@ app = FastAPI(title="User Microservice")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:4200",  # Angular dev
+        "http://localhost:4200",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -47,7 +45,6 @@ def get_db_with_schema(tenant_id: str = Depends(get_tenant_id)):
 # --------------------
 @app.on_event("startup")
 def on_startup():
-    # Dev only (in production use Alembic)
     Base.metadata.create_all(bind=engine)
 
 
@@ -82,7 +79,6 @@ def update_user(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # 🔑 apply only provided fields
     update_data = payload.model_dump(exclude_unset=True)
 
     for field, value in update_data.items():
@@ -108,7 +104,6 @@ def list_users(db: Session = Depends(get_db_with_schema)):
 # --------------------
 @app.get("/users/{user_id}/orders", response_model=UserOrderHistory)
 def get_user_orders(user_id: str, db: Session = Depends(get_db_with_schema)):
-    # ensure user exists
     user = db.execute(
         select(User).where(User.id == user_id)
     ).scalar_one_or_none()
@@ -188,7 +183,7 @@ def remove_from_cart(
         raise HTTPException(status_code=404, detail="User not found")
 
     if user.cart and order_id in user.cart:
-        user.cart.remove(order_id)  # removes first occurrence only
+        user.cart.remove(order_id)
 
     db.commit()
     db.refresh(user)

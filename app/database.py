@@ -1,4 +1,3 @@
-# app/database.py
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, DeclarativeBase
 from app.config import settings
@@ -18,12 +17,10 @@ SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 class Base(DeclarativeBase):
     pass
 
-# Dependency for FastAPI routes
 @contextmanager
 def get_db_session(schema: str = None):
     session = SessionLocal()
     try:
-        # Set search_path for this session
         session.execute(text(f"SET search_path TO {schema}"))
         yield session
     finally:

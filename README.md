@@ -1,87 +1,102 @@
-# user-service
+# User Service
 
-This repository contains a **User microservice** for a microservices-based web application.
-It is responsible for managing user data and exposing REST APIs to other services.
+User Service is a FastAPI microservice responsible for managing users, their profiles, carts and retrieving user order history in a multi-tenant microservices system.
 
-The service provides APIs for:
+## Responsibilities
 
-* Creating new users
-* Updating existing users
-* Fetching user details and listing users
-* Fetching a user’s **order history**
+* User management
+* Shopping cart for each user
+* Fetching user order history via gRPC
+* Tenant isolation using PostgreSQL schemas
+* Health and readiness checks
+* Prometheus metrics exposure
 
-  * Currently mocked (fake data), later intended to call a separate Orders microservice
+## Tech Stack
 
-And communication with a **PostgreSQL** database (locally via Docker, in production via Azure PostgreSQL)
+* **FastAPI**
+* **SQLAlchemy 2.0**
+* **PostgreSQL** (schema-per-tenant)
+* **gRPC** (Orders Service)
+* **Docker**
+* **GitHub Actions**
+* **pytest**
 
----
+## Multi-Tenancy
 
-## 1. Prerequisites
+* Tenant is selected by request header:
 
-To run this project you need Docker/Compose plus access to a PostgreSQL instance (Azure or local).
+  ```
+  X-Tenant-Id: <tenant_name>
+  ```
+* If tenant is not provided, it defaults to `public`
 
-Create a `.env` file with the shared database credentials (same format used by the other services in the platform):
+## API Endpoints
 
-```env
-PGHOST=your_postgres_host
-PGUSER=your_postgres_user
-PGPASSWORD=your_postgres_password
-PGPORT=5432
-PGDATABASE=rso
+### Users
+
+* `GET /users`
+
+Lists all users in the current tenant (schema).
+
+* `GET /users/{user_id}`
+
+Returns a single user by ID. In case that user does not exist, it returns 
+**404**.
+
+* `PATCH /users/{user_id}`
+
+Partially updates a user. Only fields included in the request body are updated.
+In case that user does not exist, it returns **404**.
+
+* `POST /users/{user_id}/cart/{order_id}`
+
+Adds an order ID to the user’s cart.
+Duplicates are allowed (same `order_id` can appear multiple times).
+In case that user does not exist, it returns **404**.
+
+* `DELETE /users/{user_id}/cart/{order_id}`
+
+Removes **one occurrence** of `order_id` from the user’s cart.
+If `order_id` is not present, cart is unchanged.
+In case that user does not exist, it returns **404**.
+
+### Orders
+
+* `GET /users/{user_id}/orders`
+
+Returns the user’s order history by calling the Orders Service via gRPC.
+In case that user does not exist, it returns **404**.
+**502** if Orders Service is unavailable or times out.
+
+### Health
+
+* `GET /health`
+
+Health/readiness endpoint. Verifies database connectivity.
+Returns **503** if database is unavailable.
+
+## Testing
+
+Tests cover:
+
+* Tenant isolation
+* User operations
+* Cart behavior
+* gRPC success & failure
+* Health checks
+
+Run tests:
+
+```powershell
+python -m pytest
 ```
 
----
+## CI/CD
 
-## 2. Running with Docker
+On push to `main`:
 
-This service is usually launched via the shared `dev-stack/docker-compose.yml`, which mounts the `.env` file and connects to the shared Postgres instance. To run it on its own:
+1. Run tests
+2. Build Docker image
+3. Push image to Azure Container Registry
 
-```bash
-docker build -t user-service .
-docker run --env-file .env -p 8004:8000 user-service
-```
-
-Swagger UI will be available at `http://localhost:8004/docs` in this standalone mode.
-
----
-
-## 3. Running locally without Docker (optional)
-
-If you prefer to run everything on your host machine:
-
-1. Start a local PostgreSQL instance and create a database.
-2. Set the `DATABASE_URL` environment variable in your shell to point to that database, for example:
-
-```bash
-export DATABASE_URL="postgresql+asyncpg://user:password@localhost:5432/user_service_db"
-```
-
-3. Install Python dependencies (from `requirements.txt`):
-
-```bash
-pip install -r requirements.txt
-```
-
-4. Run the application with an ASGI server (e.g. Uvicorn):
-
-```bash
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
-```
-
-The API will again be available at `http://localhost:8000` and docs at `/docs`.
-
----
-
-## 4. Connecting to Azure PostgreSQL (production)
-
-In production you will usually use **Azure Database for PostgreSQL** instead of the local Postgres container.
-
-Steps:
-
-1. Set the PG variables (or inject `DATABASE_URL` constructed from them) for the container or deployment, including `sslmode=require` if needed.
-2. Deploy the User microservice container (e.g. Azure Container Apps, App Service, or AKS) and ensure:
-
-   * The container can reach the Azure PostgreSQL instance
-  * The PG env vars resolve to your Azure credentials
-
-In this setup you do **not** run a sidecar Postgres container; everything points to the managed Azure database.
+Build is blocked if tests fail.

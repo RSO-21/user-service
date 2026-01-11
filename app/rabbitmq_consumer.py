@@ -28,7 +28,6 @@ def callback(ch, method, properties, body):
             event["user_id"], event["username"]
         )
         try:
-            # Idempotency: do not insert twice
             existing = db.query(User).filter(User.id == event["user_id"]).first()
             if existing:
                 print(f"User {event['user_id']} already exists")
@@ -36,7 +35,7 @@ def callback(ch, method, properties, body):
                 return
 
             user = User(
-                id=event["user_id"],          # Keycloak ID
+                id=event["user_id"],
                 username=event["username"],
                 email=event["email"]
             )
@@ -54,7 +53,6 @@ def callback(ch, method, properties, body):
         except Exception as e:
             print(f"Error processing user_created event: {e}")
             db.rollback()
-            # message not acked → will be retried
 
 def start_consumer():
     connection = get_connection()

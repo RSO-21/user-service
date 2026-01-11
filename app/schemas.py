@@ -11,7 +11,7 @@ class UserUpdate(BaseModel):
     longitude: Optional[float] = None
     latitude: Optional[float] = None
     partner_id: Optional[str] = None
-    cart: Optional[List[int]] = None  # List of Offer IDs
+    cart: Optional[List[int]] = None
 
 class UserOut(BaseModel):
     id: str
@@ -29,7 +29,7 @@ class UserOut(BaseModel):
 
     created_at: datetime
     updated_at: datetime
-    cart: Optional[List[int]] = None  # List of Offer IDs
+    cart: Optional[List[int]] = None
 
     class Config:
         from_attributes = True
