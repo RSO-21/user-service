@@ -49,11 +49,38 @@ def get_db_with_schema(tenant_id: str = Depends(get_tenant_id)):
 def on_startup():
     Base.metadata.create_all(bind=engine)
 
+# --------------------
+# Health
+# --------------------
+@app.get("/health", tags=["health"])
+def health(db: Session = Depends(get_db_with_schema)):
+    try:
+        db.execute(select(1))
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Database unavailable: {e}",
+        )
+    return {"status": "ok", "db": "ok"}
+
+@app.get("/")
+def root():
+    return {"message": "User Service is running"}
+
+router = APIRouter()
+
+# --------------------
+# List users
+# --------------------
+@router.get("/list_users", response_model=List[UserOut])
+def list_users(db: Session = Depends(get_db_with_schema)):
+    users = db.execute(select(User)).scalars().all()
+    return users
 
 # --------------------
 # Get user by id
 # --------------------
-@app.get("/users/{user_id}", response_model=UserOut)
+@router.get("/{user_id}", response_model=UserOut)
 def get_user(user_id: str, db: Session = Depends(get_db_with_schema)):
     user = db.execute(
         select(User).where(User.id == user_id)
@@ -68,7 +95,7 @@ def get_user(user_id: str, db: Session = Depends(get_db_with_schema)):
 # --------------------
 # Update user
 # --------------------
-@app.patch("/users/{user_id}", response_model=UserOut)
+@router.patch("/{user_id}", response_model=UserOut)
 def update_user(
     user_id: str,
     payload: UserUpdate,
@@ -93,18 +120,9 @@ def update_user(
 
 
 # --------------------
-# List users
-# --------------------
-@app.get("/users", response_model=List[UserOut])
-def list_users(db: Session = Depends(get_db_with_schema)):
-    users = db.execute(select(User)).scalars().all()
-    return users
-
-
-# --------------------
 # Get user order history
 # --------------------
-@app.get("/users/{user_id}/orders", response_model=UserOrderHistory)
+@router.get("/{user_id}/orders", response_model=UserOrderHistory)
 def get_user_orders(user_id: str, db: Session = Depends(get_db_with_schema)):
     user = db.execute(
         select(User).where(User.id == user_id)
@@ -144,7 +162,7 @@ def get_user_orders(user_id: str, db: Session = Depends(get_db_with_schema)):
 # --------------------
 # Add order to cart (duplicates allowed)
 # --------------------
-@app.post("/users/{user_id}/cart/{order_id}", response_model=UserOut)
+@router.post("/{user_id}/cart/{order_id}", response_model=UserOut)
 def add_to_cart(
     user_id: str,
     order_id: int,
@@ -171,7 +189,7 @@ def add_to_cart(
 # --------------------
 # Remove ONE order occurrence from cart
 # --------------------
-@app.delete("/users/{user_id}/cart/{order_id}", response_model=UserOut)
+@router.delete("/{user_id}/cart/{order_id}", response_model=UserOut)
 def remove_from_cart(
     user_id: str,
     order_id: int,
@@ -274,16 +292,4 @@ async def autocomplete_address(
     ]
 
 
-# --------------------
-# Health
-# --------------------
-@app.get("/health", tags=["health"])
-def health(db: Session = Depends(get_db_with_schema)):
-    try:
-        db.execute(select(1))
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"Database unavailable: {e}",
-        )
-    return {"status": "ok", "db": "ok"}
+app.include_router(router)
