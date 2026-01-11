@@ -1,4 +1,5 @@
-from fastapi import FastAPI, Depends, HTTPException, Header, status
+from fastapi import FastAPI, Depends, HTTPException, Header, Query, status
+import httpx
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from typing import List, Optional
@@ -16,6 +17,7 @@ from app.schemas import (
 from fastapi.middleware.cors import CORSMiddleware
 
 from prometheus_fastapi_instrumentator import Instrumentator
+from app.config import settings
 
 
 app = FastAPI(title="User Microservice")
@@ -211,6 +213,65 @@ def clear_cart(
     db.refresh(user)
 
     return user
+
+
+GOOGLE_PLACE_DETAILS = "https://maps.googleapis.com/maps/api/place/details/json"
+
+@app.get("/location/place")
+async def resolve_place(
+    place_id: str = Query(...),
+):
+    params = {
+        "place_id": place_id,
+        "key": settings.google_api_key,
+        "fields": "geometry,formatted_address",
+    }
+
+    async with httpx.AsyncClient(timeout=5) as client:
+        resp = await client.get(GOOGLE_PLACE_DETAILS, params=params)
+        resp.raise_for_status()
+
+    data = resp.json()
+
+    result = data.get("result")
+    if not result:
+        raise HTTPException(status_code=404, detail="Place not found")
+
+    loc = result["geometry"]["location"]
+
+    return {
+        "formatted_address": result["formatted_address"],
+        "latitude": loc["lat"],
+        "longitude": loc["lng"],
+    }
+
+
+GOOGLE_PLACES_AUTOCOMPLETE = "https://maps.googleapis.com/maps/api/place/autocomplete/json"
+
+@app.get("/location/autocomplete")
+async def autocomplete_address(
+    input: str = Query(..., min_length=2),
+):
+    params = {
+        "input": input,
+        "key": settings.google_api_key,
+        "components": "country:si",
+        "types": "geocode",
+    }
+
+    async with httpx.AsyncClient(timeout=5) as client:
+        resp = await client.get(GOOGLE_PLACES_AUTOCOMPLETE, params=params)
+        resp.raise_for_status()
+
+    data = resp.json()
+
+    return [
+        {
+            "description": p["description"],
+            "place_id": p["place_id"],
+        }
+        for p in data.get("predictions", [])
+    ]
 
 
 # --------------------
