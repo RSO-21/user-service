@@ -72,6 +72,19 @@ Returns the user’s order history by calling the Orders Service via gRPC.
 In case that user does not exist, it returns **404**.
 **502** if Orders Service is unavailable or times out.
 
+### Location
+
+* `GET /location/autocomplete?input=<text>`
+
+Returns address suggestions using Google Places Autocomplete API.
+The input parameter must contain at least 2 characters.
+
+* `GET /location/place?place_id=<place_id>`
+
+Resolves a Google Place ID into a formatted address and geographic coordinates (latitude and longitude).
+Returns **404** if the place cannot be resolved.
+
+
 ### Health
 
 * `GET /health`
@@ -87,6 +100,7 @@ Tests cover:
 * User operations
 * Cart behavior
 * gRPC success & failure
+* External HTTP calls to Google APIs
 * Health checks
 
 Run tests:
