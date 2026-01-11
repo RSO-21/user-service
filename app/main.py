@@ -190,6 +190,28 @@ def remove_from_cart(
 
     return user
 
+# --------------------
+# Empty cart
+# --------------------
+@app.delete("/users/{user_id}/cart", response_model=UserOut)
+def clear_cart(
+    user_id: str,
+    db: Session = Depends(get_db_with_schema),
+):
+    user = db.execute(
+        select(User).where(User.id == user_id)
+    ).scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user.cart = []
+
+    db.commit()
+    db.refresh(user)
+
+    return user
+
 
 # --------------------
 # Health
