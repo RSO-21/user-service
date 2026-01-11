@@ -25,7 +25,7 @@ _sym_db = _symbol_database.Default()
 from google.protobuf import timestamp_pb2 as google_dot_protobuf_dot_timestamp__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0corders.proto\x12\torders.v1\x1a\x1fgoogle/protobuf/timestamp.proto\")\n\x16GetOrdersByUserRequest\x12\x0f\n\x07user_id\x18\x01 \x01(\x05\"M\n\tOrderItem\x12\n\n\x02id\x18\x01 \x01(\x05\x12\x10\n\x08order_id\x18\x02 \x01(\x05\x12\x10\n\x08offer_id\x18\x03 \x01(\x05\x12\x10\n\x08quantity\x18\x04 \x01(\x05\"\xa7\x02\n\x05Order\x12\n\n\x02id\x18\x01 \x01(\x05\x12\x0f\n\x07user_id\x18\x02 \x01(\x05\x12\x17\n\npartner_id\x18\x03 \x01(\x05H\x00\x88\x01\x01\x12\x14\n\x0corder_status\x18\x04 \x01(\t\x12\x16\n\x0epayment_status\x18\x05 \x01(\t\x12\x17\n\npayment_id\x18\x06 \x01(\x05H\x01\x88\x01\x01\x12.\n\ncreated_at\x18\x07 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12.\n\nupdated_at\x18\x08 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12#\n\x05items\x18\t \x03(\x0b\x32\x14.orders.v1.OrderItemB\r\n\x0b_partner_idB\r\n\x0b_payment_id\";\n\x17GetOrdersByUserResponse\x12 \n\x06orders\x18\x01 \x03(\x0b\x32\x10.orders.v1.Order2i\n\rOrdersService\x12X\n\x0fGetOrdersByUser\x12!.orders.v1.GetOrdersByUserRequest\x1a\".orders.v1.GetOrdersByUserResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0corders.proto\x12\torders.v1\x1a\x1fgoogle/protobuf/timestamp.proto\")\n\x16GetOrdersByUserRequest\x12\x0f\n\x07user_id\x18\x01 \x01(\t\"\'\n\x13GetOrderByIdRequest\x12\x10\n\x08order_id\x18\x01 \x01(\x05\"7\n\x14GetOrderByIdResponse\x12\x1f\n\x05order\x18\x01 \x01(\x0b\x32\x10.orders.v1.Order\"M\n\tOrderItem\x12\n\n\x02id\x18\x01 \x01(\x05\x12\x10\n\x08order_id\x18\x02 \x01(\x05\x12\x10\n\x08offer_id\x18\x03 \x01(\x05\x12\x10\n\x08quantity\x18\x04 \x01(\x05\"\xa7\x02\n\x05Order\x12\n\n\x02id\x18\x01 \x01(\x05\x12\x0f\n\x07user_id\x18\x02 \x01(\t\x12\x17\n\npartner_id\x18\x03 \x01(\tH\x00\x88\x01\x01\x12\x14\n\x0corder_status\x18\x04 \x01(\t\x12\x16\n\x0epayment_status\x18\x05 \x01(\t\x12\x17\n\npayment_id\x18\x06 \x01(\x05H\x01\x88\x01\x01\x12.\n\ncreated_at\x18\x07 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12.\n\nupdated_at\x18\x08 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12#\n\x05items\x18\t \x03(\x0b\x32\x14.orders.v1.OrderItemB\r\n\x0b_partner_idB\r\n\x0b_payment_id\"\xc9\x01\n\x0cOrderSummary\x12\x13\n\x0b\x65xternal_id\x18\x01 \x01(\t\x12\x10\n\x08order_id\x18\x02 \x01(\x05\x12\x11\n\ttenant_id\x18\x03 \x01(\t\x12\x0f\n\x07user_id\x18\x04 \x01(\t\x12\x14\n\x0ctotal_amount\x18\x05 \x01(\x02\x12\x14\n\x0corder_status\x18\x06 \x01(\t\x12\x12\n\npartner_id\x18\x07 \x01(\t\x12.\n\ncreated_at\x18\x08 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\"B\n\x17GetOrdersByUserResponse\x12\'\n\x06orders\x18\x01 \x03(\x0b\x32\x17.orders.v1.OrderSummary2\xba\x01\n\rOrdersService\x12X\n\x0fGetOrdersByUser\x12!.orders.v1.GetOrdersByUserRequest\x1a\".orders.v1.GetOrdersByUserResponse\x12O\n\x0cGetOrderById\x12\x1e.orders.v1.GetOrderByIdRequest\x1a\x1f.orders.v1.GetOrderByIdResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -34,12 +34,18 @@ if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
   _globals['_GETORDERSBYUSERREQUEST']._serialized_start=60
   _globals['_GETORDERSBYUSERREQUEST']._serialized_end=101
-  _globals['_ORDERITEM']._serialized_start=103
-  _globals['_ORDERITEM']._serialized_end=180
-  _globals['_ORDER']._serialized_start=183
-  _globals['_ORDER']._serialized_end=478
-  _globals['_GETORDERSBYUSERRESPONSE']._serialized_start=480
-  _globals['_GETORDERSBYUSERRESPONSE']._serialized_end=539
-  _globals['_ORDERSSERVICE']._serialized_start=541
-  _globals['_ORDERSSERVICE']._serialized_end=646
+  _globals['_GETORDERBYIDREQUEST']._serialized_start=103
+  _globals['_GETORDERBYIDREQUEST']._serialized_end=142
+  _globals['_GETORDERBYIDRESPONSE']._serialized_start=144
+  _globals['_GETORDERBYIDRESPONSE']._serialized_end=199
+  _globals['_ORDERITEM']._serialized_start=201
+  _globals['_ORDERITEM']._serialized_end=278
+  _globals['_ORDER']._serialized_start=281
+  _globals['_ORDER']._serialized_end=576
+  _globals['_ORDERSUMMARY']._serialized_start=579
+  _globals['_ORDERSUMMARY']._serialized_end=780
+  _globals['_GETORDERSBYUSERRESPONSE']._serialized_start=782
+  _globals['_GETORDERSBYUSERRESPONSE']._serialized_end=848
+  _globals['_ORDERSSERVICE']._serialized_start=851
+  _globals['_ORDERSSERVICE']._serialized_end=1037
 # @@protoc_insertion_point(module_scope)
