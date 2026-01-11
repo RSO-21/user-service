@@ -62,7 +62,7 @@ def test_get_user_orders_success(client, app_and_engine, monkeypatch):
 
     monkeypatch.setattr(main_mod, "get_orders_by_user", _fake_get_orders_by_user)
 
-    r = client.get(f"/users/{user_id}/orders")
+    r = client.get(f"/{user_id}/orders")
     assert r.status_code == 200
     body = r.json()
     assert body["user_id"] == user_id
@@ -84,6 +84,6 @@ def test_get_user_orders_grpc_failure_returns_502(client, app_and_engine, monkey
 
     monkeypatch.setattr(main_mod, "get_orders_by_user", _boom)
 
-    r = client.get(f"/users/{user_id}/orders")
+    r = client.get(f"/{user_id}/orders")
     assert r.status_code == 502
     assert "Order service unavailable" in r.json()["detail"]
