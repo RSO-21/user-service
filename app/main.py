@@ -213,7 +213,7 @@ def remove_from_cart(
 # --------------------
 # Empty cart
 # --------------------
-@app.delete("/users/{user_id}/cart", response_model=UserOut)
+@router.delete("/{user_id}/cart", response_model=UserOut)
 def clear_cart(
     user_id: str,
     db: Session = Depends(get_db_with_schema),
