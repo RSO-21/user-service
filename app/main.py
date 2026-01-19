@@ -9,6 +9,7 @@ from app.grpc.orders_client import get_orders_by_user
 from app.database import get_db_session, engine
 from app.models import Base, User
 from app.schemas import (
+    UserCreate,
     UserUpdate,
     UserOut,
     UserOrderHistory,
@@ -68,6 +69,27 @@ def root():
     return {"message": "User Service is running"}
 
 router = APIRouter()
+
+# --------------------
+# Create users
+# --------------------
+@router.post("/", response_model=UserOut)
+def create_user(payload: UserCreate, db: Session = Depends(get_db_with_schema)):
+    existing = db.execute(select(User).where(User.id == payload.id)).scalar_one_or_none()
+    if existing:
+        return existing
+
+    user = User(
+        id=payload.id,
+        username=payload.username,
+        email=str(payload.email),
+        cart=payload.cart or [],
+    )
+
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
 
 # --------------------
 # List users

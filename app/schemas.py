@@ -2,6 +2,11 @@ from pydantic import BaseModel, EmailStr
 from datetime import datetime
 from typing import List, Optional
 
+class UserCreate(BaseModel):
+    id: str
+    username: str
+    email: EmailStr
+    cart: Optional[List[int]] = None
 
 class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
