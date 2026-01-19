@@ -80,14 +80,10 @@ def test_cart_duplicates_and_delete_removes_one(client, app_and_engine):
 
 
 def test_clear_cart_endpoint(client, app_and_engine):
-    """
-    NOTE: clear_cart endpoint is NOT under router; it's defined as:
-    DELETE /users/{user_id}/cart
-    """
     _, engine = app_and_engine
     user_id = "00000000-0000-0000-0000-000000000006"
     _insert_user(engine, "public", user_id, "cc", "cc@example.com", [1, 2, 2])
 
-    r = client.delete(f"/users/{user_id}/cart")
+    r = client.delete(f"/{user_id}/cart")
     assert r.status_code == 200
     assert r.json()["cart"] == []
